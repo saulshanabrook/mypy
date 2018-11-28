@@ -9,6 +9,7 @@ work around poor file system performance on OS X.
 
 import binascii
 import sqlite3
+import sqlite3.dbapi2
 import os
 import time
 
@@ -135,6 +136,11 @@ class SqliteMetadataStore(MetadataStore):
     def commit(self) -> None:
         self.db.commit()
 
-    def list_all(self) -> Iterable[str]:
+    # XXX: temporary hack around a mypyc bug where class names are not
+    # part of the name mangling for generator objects
+    def _list_all(self) -> Iterable[str]:
         for row in self.db.execute('SELECT name From files'):
             yield row[0]
+
+    def list_all(self) -> Iterable[str]:
+        return self._list_all()
