@@ -52,7 +52,7 @@ from mypy.plugin import Plugin, DefaultPlugin, ChainedPlugin, plugin_types
 from mypy.defaults import PYTHON3_VERSION_MIN
 from mypy.server.deps import get_dependencies
 from mypy.fscache import FileSystemCache
-from mypy.metastore import MetadataStore, FilesystemMetadataStore
+from mypy.metastore import MetadataStore, FilesystemMetadataStore, SqliteMetadataStore
 from mypy.typestate import TypeState, reset_global_state
 
 from mypy.mypyc_hacks import BuildManagerBase
@@ -508,7 +508,7 @@ class BuildManager(BuildManagerBase):
             not options.fine_grained_incremental or options.use_fine_grained_cache)
         self.fscache = fscache
         self.find_module_cache = FindModuleCache(self.search_paths, self.fscache, self.options)
-        self.metastore = FilesystemMetadataStore(_cache_dir_prefix(self))  # type: MetadataStore
+        self.metastore = SqliteMetadataStore(_cache_dir_prefix(self))  # type: MetadataStore
 
         # a mapping from source files to their corresponding shadow files
         # for efficient lookup

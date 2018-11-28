@@ -8,10 +8,12 @@ work around poor file system performance on OS X.
 """
 
 import binascii
+import sqlite3
 import os
+import time
 
 from abc import abstractmethod
-from typing import Dict, List, Set, Iterable
+from typing import Dict, List, Set, Iterable, Any
 
 
 class MetadataStore:
@@ -79,3 +81,60 @@ class FilesystemMetadataStore(MetadataStore):
             dir = os.path.relpath(dir, self.cache_dir_prefix)
             for file in files:
                 yield os.path.join(dir, file)
+
+
+SCHEMA = '''
+CREATE TABLE IF NOT EXISTS files (
+    path TEXT UNIQUE NOT NULL,
+    mtime REAL,
+    data TEXT
+);
+'''
+# No migrations yet
+MIGRATIONS = [
+]  # type: List[str]
+
+def connect_db(db_file: str) -> sqlite3.Connection:
+    db = sqlite3.dbapi2.connect(db_file)
+    db.executescript(SCHEMA)
+    for migr in MIGRATIONS:
+        try:
+            db.executescript(migr)
+        except sqlite3.OperationalError:
+            pass
+    return db
+
+class SqliteMetadataStore(MetadataStore):
+    def __init__(self, cache_dir_prefix: str) -> None:
+        os.makedirs(cache_dir_prefix, exist_ok=True)
+        self.db = connect_db(os.path.join(cache_dir_prefix, 'cache.db'))
+
+    def _query(self, name: str, field: str) -> Any:
+        # XXX: raise a different exception
+        cur = self.db.execute('SELECT {} From files WHERE path = ?'.format(field), (name,))
+        results = cur.fetchall()
+        if not results:
+            raise FileNotFoundError()
+        assert len(results) == 1
+        return results[0][0]
+
+    def getmtime(self, name: str) -> float:
+        return self._query(name, 'mtime')
+
+    def read(self, name: str) -> str:
+        return self._query(name, 'data')
+
+    def write(self, name: str, data: str) -> bool:
+        try:
+            self.db.execute('INSERT OR REPLACE INTO files(path, mtime, data) VALUES(?, ?, ?)',
+                            (name, time.time(), data))
+        except sqlite3.OperationalError:
+            return False
+        return True
+
+    def commit(self) -> None:
+        self.db.commit()
+
+    def list_all(self) -> Iterable[str]:
+        for row in self.db.execute('SELECT name From files'):
+            yield row[0]
