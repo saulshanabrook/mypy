@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS files (
     mtime REAL,
     data TEXT
 );
+CREATE INDEX IF NOT EXISTS path_idx on files(path);
 '''
 # No migrations yet
 MIGRATIONS = [

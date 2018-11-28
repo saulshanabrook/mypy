@@ -732,7 +732,7 @@ def write_plugins_snapshot(manager: BuildManager) -> None:
 
 def read_plugins_snapshot(manager: BuildManager) -> Optional[Dict[str, str]]:
     """Read cached snapshot of versions and hashes of plugins from previous run."""
-    name = os.path.join(_cache_dir_prefix(manager), '@plugins_snapshot.json')
+    name = '@plugins_snapshot.json'
     snapshot = _load_json_file(name, manager,
                                log_sucess='Plugins snapshot ',
                                log_error='Could not load plugins snapshot: ')
