@@ -1028,7 +1028,7 @@ def validate_meta(meta: Optional[CacheMeta], id: str, path: Optional[str],
             meta_json, _, _ = get_cache_names(id, path, manager)
             manager.log('Updating mtime for {}: file {}, meta {}, mtime {}'
                         .format(id, path, meta_json, meta.mtime))
-            manager.metastore.write(meta_json, meta_str)  # Ignore errors, it's just an optimization.
+            manager.metastore.write(meta_json, meta_str)  # Ignore errors, just an optimization.
             return meta
 
     # It's a match on (id, path, size, hash, mtime).
@@ -1195,7 +1195,7 @@ def delete_cache(id: str, path: str, manager: BuildManager) -> None:
     for filename in cache_paths:
         try:
             if filename:
-                os.remove(filename)
+                manager.metastore.remove(filename)
         except OSError as e:
             if e.errno != errno.ENOENT:
                 manager.log("Error deleting cache file {}: {}".format(filename, e.strerror))

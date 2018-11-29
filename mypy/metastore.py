@@ -28,6 +28,9 @@ class MetadataStore:
     def write(self, name: str, data: str) -> bool: ...
 
     @abstractmethod
+    def remove(self, name: str) -> None: ...
+
+    @abstractmethod
     def commit(self) -> None:
         """If the backing store requires a commit, do it.
 
@@ -74,6 +77,9 @@ class FilesystemMetadataStore(MetadataStore):
             return False
         return True
 
+    def remove(self, name: str) -> None:
+        os.remove(os.path.join(self.cache_dir_prefix, name))
+
     def commit(self) -> None:
         pass
 
@@ -96,6 +102,7 @@ CREATE INDEX IF NOT EXISTS path_idx on files(path);
 MIGRATIONS = [
 ]  # type: List[str]
 
+
 def connect_db(db_file: str) -> sqlite3.Connection:
     db = sqlite3.dbapi2.connect(db_file)
     db.executescript(SCHEMA)
@@ -106,14 +113,22 @@ def connect_db(db_file: str) -> sqlite3.Connection:
             pass
     return db
 
+
 class SqliteMetadataStore(MetadataStore):
     def __init__(self, cache_dir_prefix: str) -> None:
+        if cache_dir_prefix.startswith('/dev/null'):
+            self.db = None
+            return
+
         os.makedirs(cache_dir_prefix, exist_ok=True)
         self.db = connect_db(os.path.join(cache_dir_prefix, 'cache.db'))
 
     def _query(self, name: str, field: str) -> Any:
+        if not self.db:
+            raise FileNotFoundError()
+
         # XXX: raise a different exception
-        cur = self.db.execute('SELECT {} From files WHERE path = ?'.format(field), (name,))
+        cur = self.db.execute('SELECT {} FROM files WHERE path = ?'.format(field), (name,))
         results = cur.fetchall()
         if not results:
             raise FileNotFoundError()
@@ -127,6 +142,8 @@ class SqliteMetadataStore(MetadataStore):
         return self._query(name, 'data')
 
     def write(self, name: str, data: str) -> bool:
+        if not self.db:
+            return False
         try:
             self.db.execute('INSERT OR REPLACE INTO files(path, mtime, data) VALUES(?, ?, ?)',
                             (name, time.time(), data))
@@ -134,14 +151,22 @@ class SqliteMetadataStore(MetadataStore):
             return False
         return True
 
+    def remove(self, name: str) -> None:
+        if not self.db:
+            raise FileNotFoundError()
+
+        self.db.execute('DELETE FROM files WHERE path = ?', (name,))
+
     def commit(self) -> None:
-        self.db.commit()
+        if self.db:
+            self.db.commit()
 
     # XXX: temporary hack around a mypyc bug where class names are not
     # part of the name mangling for generator objects
     def _list_all(self) -> Iterable[str]:
-        for row in self.db.execute('SELECT name From files'):
-            yield row[0]
+        if self.db:
+            for row in self.db.execute('SELECT name From files'):
+                yield row[0]
 
     def list_all(self) -> Iterable[str]:
         return self._list_all()

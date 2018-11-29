@@ -574,7 +574,7 @@ def split_test_cases(parent: 'DataSuiteCollector', suite: 'DataSuite',
         data = f.read()
     cases = re.split(r'^\[case ([a-zA-Z_0-9]+)'
                      r'(-writescache)?'
-                     r'(-only_when_cache|-only_when_nocache)?'
+                     r'(-only_when_cache|-only_when_nocache|-only_when_filecache)?'
                      r'(-skip)?'
                      r'\][ \t]*$\n', data,
                      flags=re.DOTALL | re.MULTILINE)

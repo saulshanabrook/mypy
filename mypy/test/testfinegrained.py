@@ -55,6 +55,8 @@ class FineGrainedSuite(DataSuite):
     # as skipped, not just elided.
     def should_skip(self, testcase: DataDrivenTestCase) -> bool:
         if self.use_cache:
+            if testcase.only_when == '-only_when_filecache':  # XXX
+                return True
             if testcase.only_when == '-only_when_nocache':
                 return True
             # TODO: In caching mode we currently don't well support

@@ -20,6 +20,8 @@ from mypy.test.helpers import (
 )
 from mypy.errors import CompileError
 
+import pytest  # type: ignore  # no pytest in typeshed
+
 
 # List of files that contain test case descriptions.
 typecheck_files = [
@@ -90,6 +92,10 @@ class TypeCheckSuite(DataSuite):
         incremental = ('incremental' in testcase.name.lower()
                        or 'incremental' in testcase.file
                        or 'serialize' in testcase.file)
+        if testcase.only_when == '-only_when_filecache':  # XXX
+            pytest.skip()
+            return
+
         if incremental:
             # Incremental tests are run once with a cold cache, once with a warm cache.
             # Expect success on first run, errors from testcase.output (if any) on second run.

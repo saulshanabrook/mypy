@@ -4326,7 +4326,7 @@ def foo() -> None:
 [out2]
 tmp/main.py:2: error: "int" has no attribute "foo"
 
-[case testIncrementalBustedFineGrainedCache1]
+[case testIncrementalBustedFineGrainedCache1-only_when_filecache]
 # flags: --cache-fine-grained
 import a
 import b
@@ -4342,7 +4342,7 @@ import b
 [stale a, b, builtins]
 [rechecked a, b, builtins]
 
-[case testIncrementalBustedFineGrainedCache2]
+[case testIncrementalBustedFineGrainedCache2-only_when_filecache]
 # flags2: --cache-fine-grained
 import a
 import b
@@ -4354,7 +4354,7 @@ import b
 [stale a, b, builtins]
 [rechecked a, b, builtins]
 
-[case testIncrementalBustedFineGrainedCache3]
+[case testIncrementalBustedFineGrainedCache3-only_when_filecache]
 # flags: --cache-fine-grained
 import a
 import b
