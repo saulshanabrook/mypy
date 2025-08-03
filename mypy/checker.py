@@ -6252,8 +6252,32 @@ class TypeChecker(NodeVisitor[None], TypeCheckerSharedApi):
                         if isinstance(call_type, CallableType) and (
                             call_type.type_guard is not None or call_type.type_is is not None
                         ):
-                            # Handle the first argument like we do for RefExpr case
-                            expr = collapse_walrus(node.args[0])
+                            # Handle keyword arguments similar to RefExpr case
+                            expr = collapse_walrus(node.args[0])  # Default to first positional arg
+                            if node.arg_kinds[0] != nodes.ARG_POS:
+                                # the first argument might be used as a kwarg
+                                if isinstance(call_type, (CallableType, Overloaded)):
+                                    if isinstance(call_type, Overloaded):
+                                        # Use first overload for argument name lookup
+                                        first_callable = call_type.items[0]
+                                    else:
+                                        first_callable = call_type
+                                    
+                                    if first_callable.arg_names:
+                                        name = first_callable.arg_names[0]
+                                        if name in node.arg_names:
+                                            idx = node.arg_names.index(name)
+                                            # we want the idx-th variable to be narrowed
+                                            expr = collapse_walrus(node.args[idx])
+                                        else:
+                                            kind = (
+                                                "guard" if call_type.type_guard is not None else "narrower"
+                                            )
+                                            self.fail(
+                                                message_registry.TYPE_GUARD_POS_ARG_REQUIRED.format(kind), node
+                                            )
+                                            return {}, {}
+                            
                             if literal(expr) == LITERAL_TYPE:
                                 # Apply the same TypeGuard narrowing logic
                                 if call_type.type_guard is not None:
