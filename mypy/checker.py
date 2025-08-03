@@ -6236,6 +6236,37 @@ class TypeChecker(NodeVisitor[None], TypeCheckerSharedApi):
                                     consider_runtime_isinstance=False,
                                 ),
                             )
+            elif isinstance(node.callee, CallExpr):
+                # Handle case where callee is a call expression like E()(x)
+                # where E() returns an object with __call__ method that has TypeGuard
+                callee_type = get_proper_type(self.lookup_type(node.callee))
+                if isinstance(callee_type, Instance):
+                    call_member = find_member(
+                        "__call__", callee_type, callee_type, is_operator=True
+                    )
+                    if call_member is not None:
+                        call_type = get_proper_type(call_member)
+                        # Check if the __call__ method has type_guard or type_is
+                        if isinstance(call_type, CallableType) and (
+                            call_type.type_guard is not None or call_type.type_is is not None
+                        ):
+                            # Handle the first argument like we do for RefExpr case
+                            expr = collapse_walrus(node.args[0])
+                            if literal(expr) == LITERAL_TYPE:
+                                # Apply the same TypeGuard narrowing logic
+                                if call_type.type_guard is not None:
+                                    return {expr: TypeGuardedType(call_type.type_guard)}, {}
+                                else:
+                                    assert call_type.type_is is not None
+                                    return conditional_types_to_typemaps(
+                                        expr,
+                                        *self.conditional_types_with_intersection(
+                                            self.lookup_type(expr),
+                                            [TypeRange(call_type.type_is, is_upper_bound=False)],
+                                            expr,
+                                            consider_runtime_isinstance=False,
+                                        ),
+                                    )
         elif isinstance(node, ComparisonExpr):
             return self.comparison_type_narrowing_helper(node)
         elif isinstance(node, AssignmentExpr):
