@@ -6239,6 +6239,8 @@ class TypeChecker(NodeVisitor[None], TypeCheckerSharedApi):
             elif isinstance(node.callee, CallExpr):
                 # Handle case where callee is a call expression like E()(x)
                 # where E() returns an object with __call__ method that has TypeGuard
+                if len(node.args) == 0:
+                    return {}, {}
                 callee_type = get_proper_type(self.lookup_type(node.callee))
                 if isinstance(callee_type, Instance):
                     call_member = find_member(
