@@ -2983,3 +2983,25 @@ val: int = 8
 match val:
     case FOO:  # E: Cannot assign to final name "FOO"
         pass
+
+[case testTupleUnionPatternNarrowing]
+# Test for issue #19599 - tuple union pattern matching type narrowing
+from typing import Union
+
+def test_tuple_union_simple(x: Union[tuple[int, str], None]) -> None:
+    match x:
+        case (a, b):
+            reveal_type(a)  # N: Revealed type is "builtins.int"
+            reveal_type(b)  # N: Revealed type is "builtins.str"
+
+def test_tuple_union_multiple_tuples(x: Union[tuple[int, str], tuple[float, bool], None]) -> None:
+    match x:
+        case (a, b):
+            reveal_type(a)  # N: Revealed type is "Union[builtins.int, builtins.float]"
+            reveal_type(b)  # N: Revealed type is "Union[builtins.str, builtins.bool]"
+
+def test_tuple_union_incompatible_lengths(x: Union[tuple[int, str], tuple[float], None]) -> None:
+    match x:
+        case (a, b):
+            reveal_type(a)  # N: Revealed type is "builtins.int"
+            reveal_type(b)  # N: Revealed type is "builtins.str"

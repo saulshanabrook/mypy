@@ -268,6 +268,38 @@ class PatternChecker(PatternVisitor[PatternType]):
                 current_type = current_type.copy_modified(items=normalized_inner_types)
                 if len(inner_types) - 1 > required_patterns and star_position is None:
                     return self.early_non_match()
+        elif isinstance(current_type, UnionType):
+            # Handle union types that contain tuple types
+            tuple_types = []
+            for item in current_type.items:
+                item_proper = get_proper_type(item)
+                if isinstance(item_proper, TupleType):
+                    tuple_types.append(item_proper)
+            
+            if tuple_types and star_position is None:
+                # Simple case: no star pattern, check if all tuples have matching length
+                matching_tuples = [t for t in tuple_types 
+                                 if len(t.items) == required_patterns 
+                                 and find_unpack_in_list(t.items) is None]
+                
+                if matching_tuples:
+                    # Build inner_types with position-specific unions
+                    inner_types = []
+                    for pos in range(required_patterns):
+                        pos_types = [t.items[pos] for t in matching_tuples]
+                        inner_types.append(make_simplified_union(pos_types))
+                else:
+                    # No matching tuples, fallback to original logic
+                    inner_type = self.get_sequence_type(current_type, o)
+                    if inner_type is None:
+                        inner_type = self.chk.named_type("builtins.object")
+                    inner_types = [inner_type] * len(o.patterns)
+            else:
+                # Has star pattern or no tuple types, use original logic
+                inner_type = self.get_sequence_type(current_type, o)
+                if inner_type is None:
+                    inner_type = self.chk.named_type("builtins.object")
+                inner_types = [inner_type] * len(o.patterns)
         else:
             inner_type = self.get_sequence_type(current_type, o)
             if inner_type is None:
