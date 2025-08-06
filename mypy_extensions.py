@@ -8,4 +8,5 @@ def trait(cls):
     return cls
 
 class FlexibleAlias:
-    pass
+    def __getitem__(self, item):
+        return item[0] if isinstance(item, tuple) else item
